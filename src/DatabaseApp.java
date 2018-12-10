@@ -104,7 +104,7 @@ public class DatabaseApp {
 				username = in.nextLine();
 				System.out.print("Email: ");
 				String email = in.nextLine();
-				pw = console.readPassword("MYSQL DB password: ");
+				pw = console.readPassword("Password: ");
 				password = String.valueOf(pw);		
 				//				password = new String(console.readPassword("Please enter your password: "));
 				if(!signUp(username, email, password)) {
@@ -125,9 +125,10 @@ public class DatabaseApp {
 			String sql = "insert into guest(name, email, password) values('" + username + "', '" + email + "', '" + password + "');";
 			stmt.executeUpdate(sql);
 
-			loginInvalid(username, password);
+			if (loginInvalid(email, password)) {
+				System.out.println("Login invalid");
+			}
 		} catch (SQLException e) {
-			e.printStackTrace();
 			return false;
 		}
 		return true;
@@ -192,7 +193,8 @@ public class DatabaseApp {
 	private static void reporting() {
 		System.out.println("1. View all reservations.");
 		System.out.println("2. View reservation by hotel.");
-		System.out.println("3. Main menu");
+		System.out.println("3. Show all users.");
+		System.out.println("4. Main menu");
 		System.out.print("\nSelect option: ");
 		String option = in.nextLine();
 		ArrayList<Reservation> reservations = null;
@@ -226,6 +228,14 @@ public class DatabaseApp {
 			reporting();
 			break;
 		case 3:
+			ArrayList<String> guests = getAllGuests();
+			int count = 1;
+			for (String guest : guests) {
+				System.out.println("Guest #" + count + ": " + guest);
+				count++;
+				
+			}
+		case 4:
 			welcome();
 			break;
 		default:
@@ -422,6 +432,25 @@ public class DatabaseApp {
 		}
 		return reservations;
 	}
+	
+	private static ArrayList<String> getAllGuests() {
+		ArrayList<String> users = null;
+		try {
+			stmt = conn.createStatement();
+			String sql = "select guestID, name, email from guest;";
+			ResultSet rs = stmt.executeQuery(sql);
+
+			users = new ArrayList<String>();
+
+			while(rs.next()) {
+				users.add(rs.getInt("guestID") + ", "  + rs.getString("name") + ", " + rs.getString("email"));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return users;
+	}
+	
 
 	private static void makeReservation(Date myStartDate, Date myEndDate, int roomID, int guestID) {
 
@@ -440,10 +469,9 @@ public class DatabaseApp {
 		try {
 			stmt = conn.createStatement();
 			String sql = "select * from room join hotel using(hotelID)" + 
-					" where room.roomID NOT IN (select" +
-					" roomID from reservation where" +
-					" city = '" + city + "'" +
+					" where city = '" + city + "'" +
 					" ORDER BY name, rate;";
+			System.out.println(sql);
 			ResultSet rs = stmt.executeQuery(sql);
 
 			rooms = new ArrayList<Room>();
@@ -471,11 +499,9 @@ public class DatabaseApp {
 		try {
 			stmt = conn.createStatement();
 			String sql = "select * from room join hotel using(hotelID)" + 
-					" where room.roomID NOT IN (select" +
-					" roomID from reservation where" +
-					" rate >= " + minPrice + " and " + 
-					maxPrice + " >= rate)" +
-					"ORDER BY name, rate;";
+					" where rate >= " + minPrice + " and rate <= " + 
+					maxPrice + "ORDER BY name, rate;";
+			System.out.println(sql);
 			ResultSet rs = stmt.executeQuery(sql);
 
 			rooms = new ArrayList<Room>();
